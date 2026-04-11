@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>СубсидиЯ · Тренажёр господдержки</title>
+  <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Golos Text', sans-serif;
+      background: #f7f7f7;
+      color: #1A1A18;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .app-shell {
+      width: 100%;
+      max-width: 1300px;
+    }
+
+    /* Прогресс-бар (стилизован под пример) */
+    .progress-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+
+    .dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(26,26,24,0.2);
+      transition: all 0.25s;
+    }
+    .dot.active { background: #1A1A18; transform: scale(1.2); }
+    .dot.completed { background: #2D9E65; }
+    .dot.wrong-dot { background: #E24B4A; }
+
+    .counter {
+      font-size: 13px;
+      color: #9B9B94;
+      margin-left: 4px;
+    }
+
+    /* Основная раскладка */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 700px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    /* Карточки в стиле документа */
+    .card {
+      background: #fff;
+      border: 0.5px solid rgba(26,26,24,0.12);
+      border-radius: 12px;
+      padding: 1.5rem 1.25rem;
+      box-shadow: none;
+    }
+
+    .dossier-card {
+      height: fit-content;
+    }
+
+    .doc-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #9B9B94;
+      margin-bottom: 12px;
+    }
+
+    .company-name {
+      font-family: 'Spectral', serif;
+      font-size: 28px;
+      font-weight: 500;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      color: #1A1A18;
+    }
+
+    .param-item {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .param-label {
+      min-width: 110px;
+      color: #6B6B66;
+      font-weight: 400;
+    }
+
+    .param-value {
+      color: #1A1A18;
+      font-weight: 500;
+    }
+
+    .nuance-block {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 0.5px dashed rgba(26,26,24,0.2);
+      font-size: 14px;
+      color: #4a5c5e;
+      background: #fafafa;
+      padding: 14px 16px;
+      border-radius: 8px;
+    }
+
+    /* Сетка программ */
+    .programs-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 550px) {
+      .programs-grid { grid-template-columns: 1fr; }
+    }
+
+    .program-card {
+      background: #fff;
+      border: 0.5px solid rgba(26,26,24,0.12);
+      border-radius: 12px;
+      padding: 1.25rem 1rem;
+      transition: opacity 0.2s, background 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .program-card.outcast {
+      opacity: 0.6;
+      background: #f3f3f3;
+      border-color: rgba(26,26,24,0.08);
+    }
+
+    /* Штамп ОТСЕЯНО — кликабельный для возврата */
+    .stamp {
+      position: absolute;
+      top: 12px;
+      right: -6px;
+      transform: rotate(10deg);
+      background: #9B9B94;
+      color: white;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 4px 16px;
+      letter-spacing: 2px;
+      border: 1px dashed #d0d0ca;
+      border-radius: 30px;
+      opacity: 0.9;
+      z-index: 5;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      transition: background 0.15s;
+    }
+
+    .stamp:hover {
+      background: #7a7a73;
+    }
+
+    .program-title {
+      font-weight: 600;
+      font-size: 1.3rem;
+      color: #1A1A18;
+      margin-bottom: 8px;
+      padding-right: 50px;
+    }
+
+    .program-amount {
+      font-weight: 600;
+      font-size: 1.5rem;
+      color: #1e4b6e;
+      margin-bottom: 12px;
+    }
+
+    .program-desc {
+      font-size: 0.9rem;
+      color: #3e4a52;
+      margin-bottom: 16px;
+      line-height: 1.45;
+      flex: 1;
+    }
+
+    .program-deadline {
+      font-size: 0.8rem;
+      color: #6B6B66;
+      margin-bottom: 18px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .btn {
+      border: none;
+      background: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-family: 'Golos Text', sans-serif;
+      font-weight: 500;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      flex: 1;
+      text-align: center;
+      border: 0.5px solid transparent;
+    }
+
+    .btn-outline {
+      border: 0.5px solid rgba(26,26,24,0.25);
+      background: transparent;
+      color: #1A1A18;
+    }
+
+    .btn-outline-red {
+      border-color: #D35A5A;
+      color: #B13A3A;
+    }
+
+    .btn-outline-red:hover {
+      background: #FDECEA;
+      border-color: #D35A5A;
+    }
+
+    .btn-filled {
+      background: #1A1A18;
+      color: white;
+      border: none;
+    }
+
+    .btn-filled-blue {
+      background: #1e5f9e;
+      color: white;
+    }
+
+    .btn-filled-blue:hover {
+      background: #154a7a;
+    }
+
+    .btn-filled:hover {
+      opacity: 0.9;
+    }
+
+    .program-card.outcast .btn-filled-blue,
+    .program-card.outcast .btn-outline-red {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* Кнопка "Поискать еще" */
+    .extra-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 22px;
+    }
+
+    .btn-search-more {
+      background: #fff;
+      border: 0.5px solid rgba(26,26,24,0.25);
+      color: #1A1A18;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-search-more:hover {
+      background: #f0f0f0;
+    }
+
+    /* Модальное окно */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(26,26,24,0.3);
+      backdrop-filter: blur(2px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      visibility: hidden;
+    }
+
+    .feedback-modal {
+      background: #fff;
+      max-width: 460px;
+      width: 90%;
+      border-radius: 16px;
+      padding: 32px 28px;
+      border: 0.5px solid rgba(26,26,24,0.12);
+      text-align: center;
+      box-shadow: 0 20px 35px -8px rgba(0,0,0,0.1);
+    }
+
+    .feedback-icon {
+      font-size: 2.8rem;
+      margin-bottom: 8px;
+    }
+
+    .feedback-message {
+      font-family: 'Spectral', serif;
+      font-size: 1.6rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #1A1A18;
+    }
+
+    .feedback-detail {
+      color: #3e4a52;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .modal-btn {
+      background: #1A1A18;
+      color: white;
+      padding: 14px 24px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 500;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.15s;
+    }
+
+    .modal-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Экран результатов */
+    .result-screen {
+      text-align: center;
+      padding: 2.5rem 2rem;
+      background: #fff;
+      border-radius: 16px;
+      border: 0.5px solid rgba(26,26,24,0.12);
+    }
+
+    .result-score {
+      font-family: 'Spectral', serif;
+      font-size: 64px;
+      font-weight: 500;
+      margin: 20px 0 10px;
+    }
+
+    .result-message {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+      color: #1A1A18;
+    }
+
+    .restart-btn {
+      background: #fff;
+      border: 0.5px solid rgba(26,26,24,0.25);
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-family: 'Golos Text', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 8px;
+      transition: background 0.15s;
+    }
+
+    .restart-btn:hover {
+      background: #f0f0f0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Прогресс -->
+  <div class="progress-row" id="progressRow">
+    <div class="dots" id="progressDots"></div>
+    <span class="counter" id="progressCounter">1/3</span>
+  </div>
+
+  <!-- Основной экран -->
+  <div id="gameScreen">
+    <div class="layout">
+      <!-- Досье -->
+      <div class="card dossier-card" id="dossierCard"></div>
+
+      <!-- Программы -->
+      <div style="display: flex; flex-direction: column;">
+        <div class="programs-grid" id="programsGrid"></div>
+        <div class="extra-actions" id="extraActions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Экран результатов -->
+  <div id="resultScreen" class="result-screen hidden"></div>
+
+  <!-- Модальное окно -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="feedback-modal">
+      <div class="feedback-icon" id="modalIcon">📋</div>
+      <div class="feedback-message" id="modalTitle">Результат</div>
+      <div class="feedback-detail" id="modalText"></div>
+      <button class="modal-btn" id="modalContinueBtn">Продолжить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    "use strict";
+
+    // ---------- ДАННЫЕ ----------
+    const iterationsLevel1 = [
+      {
+        dossier: {
+          fullName: 'ООО «Кедр»',
+          age: '3 года',
+          goal: 'Приобретение немецкого станка стоимостью 5 млн ₽',
+          ownMoney: '1,5 млн ₽',
+          plan: 'Рост выручки +10%',
+          nuance: 'Справка из налоговой будет через 5 дней.'
+        },
+        programs: [
+          { title: 'Стартап-Грант', amount: '3 млн ₽', desc: 'Для бизнеса до 2 лет.', deadline: 'Дедлайн: сегодня', feedback: '🔴 Отказ. Не подходите по возрасту (3 года вместо 2) и срокам.', optimal: false },
+          { title: 'Техно-Лидер', amount: '4 млн ₽', desc: 'Софинансирование 20%. KPI: рост выручки +40%.', deadline: 'Приём 20 дней', feedback: '🟡 Принято, но опасно. Рост +40% — в 4 раза выше плана. Риск возврата.', optimal: false },
+          { title: 'Импортозамещение', amount: '4 млн ₽', desc: 'Софинансирование 20%. Только станки из РФ.', deadline: 'Приём 30 дней', feedback: '🔴 Провал. Купили немецкий станок под российский реестр.', optimal: false },
+          { title: 'МСП-Актив', amount: '2 млн ₽', desc: 'Софинансирование 60% (нужно 3 млн своих).', deadline: 'Приём 15 дней', feedback: '🔴 Отказ. Не хватает 1,5 млн собственных средств.', optimal: false }
+        ],
+        searchMoreFeedback: '✅ Оптимально. Вы заметили, что ни одна программа не подходит идеально.',
+        searchMoreOptimal: true
+      },
+      {
+        dossier: {
+          fullName: 'ООО «Байт»',
+          age: '1 год',
+          goal: 'Разработка ПО и аренда серверов на 2 млн ₽',
+          ownMoney: '500 тыс ₽',
+          plan: 'Нанять 2 программистов',
+          nuance: ''
+        },
+        programs: [
+          { title: 'Молодой IT-бизнес', amount: '1,5 млн ₽', desc: 'Софинансирование 25%. KPI: сохранение штата.', deadline: '', feedback: '✅ Оптимально! Идеальный мэтч.', optimal: true },
+          { title: 'Экспорт-IT', amount: '3 млн ₽', desc: 'Только на продвижение за рубежом.', deadline: '', feedback: '🔴 Отказ. Цель — разработка, а не реклама.', optimal: false },
+          { title: 'Цифровое железо', amount: '2 млн ₽', desc: 'Только на покупку серверов (CAPEX).', deadline: '', feedback: '🟡 Частичный успех. На зарплаты не останется.', optimal: false },
+          { title: 'Гипер-Рост', amount: '5 млн ₽', desc: 'Софинансирование 10%. Нанять 15 сотрудников.', deadline: '', feedback: '🔴 Крах. Содержать 15 человек невозможно.', optimal: false }
+        ],
+        searchMoreFeedback: '🔴 Ошибка. Вы упустили идеальную программу №1.',
+        searchMoreOptimal: false
+      },
+      {
+        dossier: {
+          fullName: 'КФХ «Эко-Нива»',
+          age: '5 лет',
+          goal: 'Строительство склада и покупка семян на 10 млн ₽',
+          ownMoney: '3 млн ₽',
+          plan: 'Запуск к осени',
+          nuance: ''
+        },
+        programs: [
+          { title: 'Агро-Старт', amount: '5 млн ₽', desc: 'Для тех, кто работает первый год.', deadline: '', feedback: '🔴 Отказ. Вы слишком «взрослый» для программы.', optimal: false },
+          { title: 'Региональный склад', amount: '7 млн ₽', desc: 'Софинансирование 30%. Возмещение.', deadline: '', feedback: '🔴 Тупик. Нужно сначала найти все 10 млн.', optimal: false },
+          { title: 'Посевная поддержка', amount: '2 млн ₽', desc: 'Субсидия только на семена.', deadline: '', feedback: '🟡 Мало. Склад строить не на что.', optimal: false },
+          { title: 'Инвест-Агро', amount: '7 млн ₽', desc: 'Софинансирование 30%. Аванс. KPI: рост урожайности +10%.', deadline: '', feedback: '✅ Оптимально! Аванс позволит начать стройку.', optimal: true }
+        ],
+        searchMoreFeedback: '🟡 Осторожно. Программа №4 вполне рабочая.',
+        searchMoreOptimal: false
+      }
+    ];
+
+    const iterationsLevel2 = [
+      {
+        dossier: {
+          fullName: 'Социальное предприятие «Био-Пак»',
+          age: 'в реестре',
+          goal: 'Закупка сырья и аренда склада 3 млн ₽',
+          ownMoney: '600 тыс ₽',
+          plan: 'Бесплатное обучение 10 человек',
+          nuance: '80% расходов — сырьё (операционка), 20% оборудование'
+        },
+        programs: [
+          { title: 'Грант Соцбизнес', amount: '1,5 млн ₽', desc: 'Софин. 50%. Только аренда/оборудование.', deadline: '', feedback: '🔴 Отказ. Своих 600к меньше 50%.', optimal: false },
+          { title: 'Зеленая инициатива', amount: '2,5 млн ₽', desc: 'Запрет на сырьё и аренду.', deadline: '', feedback: '🔴 Провал. 80% нужд — сырьё.', optimal: false },
+          { title: 'Местный производитель', amount: '1 млн ₽', desc: 'Субсидия на любые цели. KPI: нанять 3 сотрудников.', deadline: '', feedback: '✅ Оптимально. Лёгкий KPI.', optimal: true },
+          { title: 'Эко-Лидер', amount: '3 млн ₽', desc: 'Возмещение 70% затрат на оборудование.', deadline: '', feedback: '🔴 Тупик. Оборудования почти нет.', optimal: false }
+        ],
+        searchMoreFeedback: '🟡 Осторожно. Программа №3 рабочая.',
+        searchMoreOptimal: false
+      },
+      {
+        dossier: {
+          fullName: 'ООО «Стиль-РФ»',
+          age: 'Малый бизнес',
+          goal: 'Итальянские швейные машины 8 млн ₽',
+          ownMoney: '3 млн ₽',
+          plan: 'Экспорт в Казахстан и Беларусь',
+          nuance: 'Иностранный учредитель (доля 30%)'
+        },
+        programs: [
+          { title: 'Легпром-Модернизация', amount: '6 млн ₽', desc: 'Софин. 25%. Без иностранных учредителей.', deadline: '', feedback: '🔴 Отказ. Иностранный учредитель.', optimal: false },
+          { title: 'Экспортный кэшбэк', amount: 'возмещение 50%', desc: 'На логистику и выставки.', deadline: '', feedback: '🔴 Мимо цели.', optimal: false },
+          { title: 'Пром-Лизинг', amount: 'субсидия до 2 млн', desc: 'На первый взнос по лизингу.', deadline: '', feedback: '✅ Оптимально! Лизинг для импорта.', optimal: true },
+          { title: 'Развитие МСП', amount: '4 млн ₽', desc: 'Софин. 50%. KPI: рост выручки +20%.', deadline: '', feedback: '🔴 Отказ. Нужно 4 млн своих.', optimal: false }
+        ],
+        searchMoreFeedback: '🔴 Ошибка. Программа №3 идеальна.',
+        searchMoreOptimal: false
+      },
+      {
+        dossier: {
+          fullName: 'АО «Квант»',
+          age: 'Средний бизнес',
+          goal: 'Создание лаборатории 50 млн ₽',
+          ownMoney: '15 млн ₽',
+          plan: 'Патент и выручка 200 млн через 2 года',
+          nuance: 'Техническая просрочка по кредиту на 1 день'
+        },
+        programs: [
+          { title: 'Мега-Грант', amount: '35 млн ₽', desc: 'Софин. 30%. Без просрочек 6 мес.', deadline: '', feedback: '🔴 Отказ. Просрочка в БКИ.', optimal: false },
+          { title: 'ФРП', amount: 'займ под 1%', desc: 'Требуется банковская гарантия.', deadline: '', feedback: '🟡 Сложно. С просрочкой гарантию не дадут.', optimal: false },
+          { title: 'Региональный инвест-проект', amount: 'налоговые льготы', desc: 'Снижение налога на прибыль.', deadline: '', feedback: '🔴 Не сейчас. Нужны живые деньги.', optimal: false },
+          { title: 'НИОКР-Субсидия', amount: '20 млн ₽', desc: 'Возмещение зарплат учёным.', deadline: '', feedback: '🔴 Риск. Сначала выплати из своих.', optimal: false }
+        ],
+        searchMoreFeedback: '✅ Единственно верно. Исправьте историю.',
+        searchMoreOptimal: true
+      }
+    ];
+
+    // Состояние
+    let currentLevel = 1;
+    let levelIterations = iterationsLevel1;
+    let currentIterIndex = 0;
+    let score = 0;
+    let outcastFlags = [false, false, false, false];
+    let submissionDone = false;
+
+    // DOM
+    const gameScreen = document.getElementById('gameScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const dossierCard = document.getElementById('dossierCard');
+    const programsGrid = document.getElementById('programsGrid');
+    const extraActions = document.getElementById('extraActions');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalText = document.getElementById('modalText');
+    const modalContinueBtn = document.getElementById('modalContinueBtn');
+    const progressDots = document.getElementById('progressDots');
+    const progressCounter = document.getElementById('progressCounter');
+
+    let nextActionAfterModal = null;
+
+    function updateProgress() {
+      const total = levelIterations.length;
+      const current = currentIterIndex + 1;
+      progressCounter.textContent = `${current}/${total}`;
+      let dotsHtml = '';
+      for (let i = 0; i < total; i++) {
+        let cls = 'dot';
+        if (i < currentIterIndex) cls += ' completed';
+        else if (i === currentIterIndex) cls += ' active';
+        dotsHtml += `<span class="${cls}"></span>`;
+      }
+      progressDots.innerHTML = dotsHtml;
+    }
+
+    function hideModal() {
+      modalOverlay.style.visibility = 'hidden';
+    }
+
+    function showModal(icon, title, detail, onContinue) {
+      modalIcon.textContent = icon || '📋';
+      modalTitle.textContent = title;
+      modalText.textContent = detail;
+      modalOverlay.style.visibility = 'visible';
+      nextActionAfterModal = onContinue;
+    }
+
+    modalContinueBtn.onclick = function() {
+      hideModal();
+      if (nextActionAfterModal) {
+        const action = nextActionAfterModal;
+        nextActionAfterModal = null;
+        action();
+      }
+    };
+
+    function proceedAfterSubmission() {
+      if (currentLevel === 1) {
+        if (currentIterIndex + 1 < levelIterations.length) {
+          currentIterIndex++;
+          renderIteration();
+        } else {
+          showLevel1Result();
+        }
+      } else {
+        if (currentIterIndex + 1 < levelIterations.length) {
+          currentIterIndex++;
+          renderIteration();
+        } else {
+          showFinalResult();
+        }
+      }
+    }
+
+    function handleApply(idx) {
+      if (submissionDone) return;
+      const prog = levelIterations[currentIterIndex].programs[idx];
+      if (prog.optimal) score++;
+      submissionDone = true;
+      let icon = prog.feedback.includes('✅') ? '✅' : (prog.feedback.includes('🟡') ? '⚠️' : '❌');
+      showModal(icon, prog.title, prog.feedback, () => proceedAfterSubmission());
+    }
+
+    function handleSearchMore() {
+      if (submissionDone) return;
+      const iter = levelIterations[currentIterIndex];
+      if (iter.searchMoreOptimal) score++;
+      submissionDone = true;
+      showModal('🔍', 'Поискать другие программы', iter.searchMoreFeedback, () => proceedAfterSubmission());
+    }
+
+    function checkAllOutcast() {
+      const allOut = outcastFlags.every(v => v);
+      if (allOut && !submissionDone) {
+        extraActions.innerHTML = '<button class="btn-search-more" id="searchMoreBtn">🔎 Поискать еще</button>';
+        document.getElementById('searchMoreBtn').addEventListener('click', handleSearchMore);
+      } else {
+        extraActions.innerHTML = '';
+      }
+    }
+
+    function toggleOutcast(index) {
+      if (submissionDone) return;
+      outcastFlags[index] = !outcastFlags[index];
+      renderPrograms();
+      checkAllOutcast();
+    }
+
+    function renderPrograms() {
+      const iter = levelIterations[currentIterIndex];
+      let html = '';
+      for (let i = 0; i < iter.programs.length; i++) {
+        const p = iter.programs[i];
+        const out = outcastFlags[i];
+        html += `
+          <div class="program-card ${out ? 'outcast' : ''}" data-index="${i}">
+            ${out ? `<div class="stamp" data-stamp-index="${i}">ОТСЕЯНО</div>` : ''}
+            <div class="program-title">${p.title}</div>
+            <div class="program-amount">${p.amount}</div>
+            <div class="program-desc">${p.desc}</div>
+            <div class="program-deadline">${p.deadline || 'Приём открыт'}</div>
+            <div class="card-actions">
+              <button class="btn btn-outline-red outcast-toggle-btn" data-index="${i}">${out ? 'Вернуть' : 'Отсеять'}</button>
+              <button class="btn btn-filled-blue apply-btn" data-index="${i}" ${out ? 'disabled' : ''}>Подать заявку</button>
+            </div>
+          </div>
+        `;
+      }
+      programsGrid.innerHTML = html;
+
+      // Кнопки "Отсеять/Вернуть"
+      document.querySelectorAll('.outcast-toggle-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = btn.dataset.index;
+          if (idx !== undefined) toggleOutcast(parseInt(idx));
+        });
+      });
+
+      // Клик по штампу тоже возвращает
+      document.querySelectorAll('.stamp').forEach(stamp => {
+        stamp.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = stamp.dataset.stampIndex;
+          if (idx !== undefined) toggleOutcast(parseInt(idx));
+        });
+      });
+
+      document.querySelectorAll('.apply-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (submissionDone) return;
+          const idx = btn.dataset.index;
+          if (idx !== undefined && !outcastFlags[parseInt(idx)]) {
+            handleApply(parseInt(idx));
+          }
+        });
+      });
+    }
+
+    function renderDossier() {
+      const d = levelIterations[currentIterIndex].dossier;
+      const nuanceHtml = d.nuance ? `<div class="nuance-block">⚠️ ${d.nuance}</div>` : '';
+      dossierCard.innerHTML = `
+        <div class="doc-label">ДОСЬЕ КОМПАНИИ</div>
+        <div class="company-name">${d.fullName}</div>
+        <div class="param-item"><span class="param-label">Возраст</span><span class="param-value">${d.age}</span></div>
+        <div class="param-item"><span class="param-label">Цель</span><span class="param-value">${d.goal}</span></div>
+        <div class="param-item"><span class="param-label">Собственные средства</span><span class="param-value">${d.ownMoney}</span></div>
+        <div class="param-item"><span class="param-label">План</span><span class="param-value">${d.plan}</span></div>
+        ${nuanceHtml}
+      `;
+    }
+
+    function renderIteration() {
+      outcastFlags = [false, false, false, false];
+      submissionDone = false;
+      extraActions.innerHTML = '';
+      renderDossier();
+      renderPrograms();
+      updateProgress();
+      gameScreen.classList.remove('hidden');
+      resultScreen.classList.add('hidden');
+    }
+
+    function showLevel1Result() {
+      gameScreen.classList.add('hidden');
+      resultScreen.classList.remove('hidden');
+      let msg = '', extra = '';
+      if (score === 3) {
+        msg = 'Блестяще! Вы настоящий мастер. Хотите продвинутые кейсы?';
+        extra = '<button class="restart-btn" id="toLevel2Btn">🏆 3 дополнительных кейса</button>';
+      } else if (score === 2) {
+        msg = 'Хороший результат! Ещё немного внимания к деталям.';
+        extra = '<button class="restart-btn" id="retryLevel1Btn">🔄 Попробовать снова</button>';
+      } else {
+        msg = 'Не расстраивайтесь, это непросто. Повторите модуль.';
+        extra = '<button class="restart-btn" id="retryLevel1Btn">📘 Повторить уровень</button>';
+      }
+      resultScreen.innerHTML = `
+        <h2 style="font-family:Spectral,serif;font-weight:500;">🏁 Уровень 1 завершён</h2>
+        <div class="result-score">${score} / 3</div>
+        <div class="result-message">${msg}</div>
+        ${extra}
+        <button class="restart-btn" id="resetAllBtn">🔁 В начало</button>
+      `;
+      if (score === 3) {
+        document.getElementById('toLevel2Btn').addEventListener('click', ()=>{
+          currentLevel = 2;
+          levelIterations = iterationsLevel2;
+          currentIterIndex = 0;
+          score = 0;
+          renderIteration();
+        });
+      } else {
+        document.getElementById('retryLevel1Btn').addEventListener('click', ()=>{
+          currentLevel = 1;
+          levelIterations = iterationsLevel1;
+          currentIterIndex = 0;
+          score = 0;
+          renderIteration();
+        });
+      }
+      document.getElementById('resetAllBtn').addEventListener('click', ()=>{
+        currentLevel = 1;
+        levelIterations = iterationsLevel1;
+        currentIterIndex = 0;
+        score = 0;
+        renderIteration();
+      });
+    }
+
+    function showFinalResult() {
+      gameScreen.classList.add('hidden');
+      resultScreen.classList.remove('hidden');
+      let finalMsg = '';
+      if (score === 3) finalMsg = 'Невероятно! Вы — акула господдержки.';
+      else if (score >= 1) finalMsg = 'Хорошо, но детали ускользают. Помните о стоп-факторах.';
+      else finalMsg = 'Уровень сложный. Вы учитесь на ошибках.';
+      resultScreen.innerHTML = `
+        <h2 style="font-family:Spectral;">🏆 Экспертный уровень</h2>
+        <div class="result-score">${score} / 3</div>
+        <div class="result-message">${finalMsg}</div>
+        <button class="restart-btn" id="playAgainBtn">🔄 Играть снова</button>
+      `;
+      document.getElementById('playAgainBtn').addEventListener('click', ()=>{
+        currentLevel = 1;
+        levelIterations = iterationsLevel1;
+        currentIterIndex = 0;
+        score = 0;
+        renderIteration();
+      });
+    }
+
+    function init() {
+      currentLevel = 1;
+      levelIterations = iterationsLevel1;
+      currentIterIndex = 0;
+      score = 0;
+      renderIteration();
+    }
+
+    init();
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) {
+        hideModal();
+        nextActionAfterModal = null;
+      }
+    });
+  })();
+</script>
+</body>
+</html>
